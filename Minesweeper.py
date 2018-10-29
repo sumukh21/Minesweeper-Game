@@ -108,3 +108,112 @@ def showcells(grid, currgrid, rowno, colno):
             if currgrid[r][c] != 'F':
                 showcells(grid, currgrid, r, c)
 
+def playagain():
+    choice = input('Play again? (y/n): ')
+
+    return choice.lower() == 'y'
+
+
+def parseinput(inputstring, gridsize, helpmessage):
+    cell = ()
+    flag = False
+    message = "Invalid cell. " + helpmessage
+
+    pattern = r'([a-{}])([0-9]+)(f?)'.format(ascii_lowercase[gridsize - 1])
+    validinput = re.match(pattern, inputstring)
+
+    if inputstring == 'help':
+        message = helpmessage
+
+    elif validinput:
+        rowno = int(validinput.group(2)) - 1
+        colno = ascii_lowercase.index(validinput.group(1))
+        flag = bool(validinput.group(3))
+
+        if -1 < rowno < gridsize:
+            cell = (rowno, colno)
+            message = ''
+
+    return {'cell': cell, 'flag': flag, 'message': message}
+
+
+def playgame():
+    gridsize = 9
+    numberofmines = 10
+
+    currgrid = [[' ' for i in range(gridsize)] for i in range(gridsize)]
+
+    grid = []
+    flags = []
+    starttime = 0
+
+    helpmessage = ("Type the column followed by the row (eg. a5). "
+                   "To put or remove a flag, add 'f' to the cell (eg. a5f).")
+
+    showgrid(currgrid)
+    print(helpmessage + " Type 'help' to show this message again.\n")
+
+    while True:
+        minesleft = numberofmines - len(flags)
+        prompt = input('Enter the cell ({} mines left): '.format(minesleft))
+        result = parseinput(prompt, gridsize, helpmessage + '\n')
+
+        message = result['message']
+        cell = result['cell']
+
+        if cell:
+            print('\n\n')
+            rowno, colno = cell
+            currcell = currgrid[rowno][colno]
+            flag = result['flag']
+
+            if not grid:
+                grid, mines = setupgrid(gridsize, cell, numberofmines)
+            if not starttime:
+                starttime = time.time()
+
+            if flag:
+                # Add a flag if the cell is empty
+                if currcell == ' ':
+                    currgrid[rowno][colno] = 'F'
+                    flags.append(cell)
+                # Remove the flag if there is one
+                elif currcell == 'F':
+                    currgrid[rowno][colno] = ' '
+                    flags.remove(cell)
+                else:
+                    message = 'Cannot put a flag there'
+
+            # If there is a flag there, show a message
+            elif cell in flags:
+                message = 'There is a flag there'
+
+            elif grid[rowno][colno] == 'X':
+                print('Game Over\n')
+                showgrid(grid)
+                if playagain():
+                    playgame()
+                return
+
+            elif currcell == ' ':
+                showcells(grid, currgrid, rowno, colno)
+
+            else:
+                message = "That cell is already shown"
+
+            if set(flags) == set(mines):
+                minutes, seconds = divmod(int(time.time() - starttime), 60)
+                print(
+                    'You Win. '
+                    'It took you {} minutes and {} seconds.\n'.format(minutes,
+                                                                      seconds))
+                showgrid(grid)
+                if playagain():
+                    playgame()
+                return
+
+        showgrid(currgrid)
+        print(message)
+
+playgame()
+
